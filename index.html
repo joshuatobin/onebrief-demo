@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Global Region Build-Out</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0B0E14; --panel:#131823; --panel2:#0F141E;
+    --text:#E6EAF0; --muted:#8A94A6; --faint:#5A6478;
+    --blue:#5B9DFF; --amber:#F5B544; --purple:#A78BFA; --green:#4ED4A0;
+    --border:#1E2633; --border2:#2A3445;
+    --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+    --sans:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%}
+  body{background:var(--bg);color:var(--text);font-family:var(--sans);overflow:hidden}
+
+  /* progress + counter */
+  #progress{position:fixed;top:0;left:0;height:2px;background:linear-gradient(90deg,var(--blue),var(--amber));width:0;z-index:100;transition:width .4s ease}
+  #counter{position:fixed;top:18px;right:24px;font-family:var(--mono);font-size:12px;color:var(--faint);z-index:100;letter-spacing:.1em}
+  #brand{position:fixed;bottom:16px;left:24px;font-family:var(--mono);font-size:10.5px;color:var(--faint);z-index:100;letter-spacing:.08em}
+  #hint{position:fixed;bottom:16px;right:24px;font-family:var(--mono);font-size:11px;color:var(--faint);z-index:100;letter-spacing:.06em;transition:opacity .6s;opacity:.8}
+  #hint.gone{opacity:0}
+
+  /* slides */
+  .slide{position:fixed;inset:0;display:none;flex-direction:column;justify-content:center;
+    padding:6vh 8vw;opacity:0;transform:translateX(24px);transition:opacity .5s ease,transform .5s ease}
+  .slide.active{display:flex;opacity:1;transform:translateX(0)}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.28em;text-transform:uppercase;color:var(--blue);margin-bottom:18px}
+  h1{font-family:var(--mono);font-weight:700;font-size:clamp(28px,4.4vw,52px);line-height:1.08;letter-spacing:-.01em}
+  h1 .am{color:var(--amber)} h1 .bl{color:var(--blue)}
+  .sub{color:var(--muted);font-size:clamp(15px,1.5vw,19px);margin-top:18px;max-width:46ch;line-height:1.5}
+  .anchor{margin-top:26px;font-family:var(--mono);font-size:clamp(13px,1.3vw,16px);color:var(--text)}
+  .anchor::before{content:"› ";color:var(--amber)}
+
+  /* slide 1 globe */
+  .s1wrap{display:grid;grid-template-columns:1.05fr .95fr;gap:5vw;align-items:center}
+  .stats{display:flex;gap:34px;margin-top:34px}
+  .stat .n{font-family:var(--mono);font-weight:700;font-size:clamp(26px,3vw,40px);color:var(--text)}
+  .stat .n.bl{color:var(--blue)} .stat .l{font-size:12px;color:var(--muted);margin-top:4px;letter-spacing:.04em}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:30px;max-width:48ch}
+  .chip{font-size:11.5px;color:var(--muted);border:1px solid var(--border2);border-radius:20px;padding:5px 12px;background:var(--panel)}
+  .globe{aspect-ratio:1;width:100%;max-width:420px;margin:0 auto}
+  .node{fill:var(--blue)} .node.new{fill:var(--amber)}
+  .pulse{transform-box:fill-box;transform-origin:center;animation:pulse 2.4s ease-out infinite}
+  @keyframes pulse{0%{opacity:.9;r:5}70%{opacity:0;r:18}100%{opacity:0;r:18}}
+  .link{stroke:var(--border2);stroke-width:1}
+
+  /* slide 2 role */
+  .bridge{display:grid;grid-template-columns:1fr auto 1fr;gap:3vw;align-items:center;margin-top:30px}
+  .col{display:flex;flex-direction:column;gap:10px}
+  .pill{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:11px 14px;font-size:13px}
+  .pill .t{font-weight:600} .pill .s{color:var(--muted);font-size:11.5px;margin-top:2px}
+  .center{text-align:center}
+  .me{background:linear-gradient(180deg,#16243d,#101725);border:1px solid var(--blue);border-radius:12px;padding:16px 20px;box-shadow:0 0 0 4px rgba(91,157,255,.08)}
+  .me .t{font-family:var(--mono);font-weight:700;color:var(--blue)} .me .s{font-size:11px;color:var(--muted);margin-top:4px;max-width:18ch}
+  .ba{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:30px}
+  .ba .box{border:1px solid var(--border);border-radius:12px;padding:16px 18px;background:var(--panel2)}
+  .ba .h{font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;margin-bottom:10px}
+  .ba .h.before{color:var(--faint)} .ba .h.after{color:var(--green)}
+  .ba li{list-style:none;font-size:12.5px;color:var(--muted);padding:4px 0 4px 16px;position:relative}
+  .ba li::before{content:"—";position:absolute;left:0;color:var(--border2)}
+  .ba .after li::before{content:"✓";color:var(--green)}
+
+  /* slide 3 anatomy */
+  .stack{display:flex;flex-direction:column-reverse;gap:7px;margin-top:24px;max-width:760px}
+  .layer{display:grid;grid-template-columns:30px 1fr auto;align-items:center;gap:14px;
+    border:1px solid var(--border);border-left-width:3px;border-radius:8px;background:var(--panel);padding:12px 16px}
+  .layer.mine{border-left-color:var(--blue)} .layer.partner{border-left-color:var(--faint)} .layer.boundary{border-left-color:var(--purple)}
+  .layer .num{font-family:var(--mono);font-size:12px;color:var(--faint)}
+  .layer .lab{font-weight:600;font-size:14.5px}
+  .layer .tech{font-family:var(--mono);font-size:12px;color:var(--muted);text-align:right}
+  .layer.sig{background:linear-gradient(90deg,rgba(91,157,255,.08),var(--panel))}
+  .anatomy-side{display:flex;flex-direction:column;justify-content:center;gap:22px;padding-left:2vw}
+  .legend{display:flex;flex-direction:column;gap:8px}
+  .legend div{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:8px}
+  .dot{width:10px;height:10px;border-radius:2px}
+  .dot.bl{background:var(--blue)} .dot.pu{background:var(--purple)} .dot.gr{background:var(--faint)}
+  .bigstat{font-family:var(--mono)}
+  .bigstat .v{font-size:clamp(30px,3.4vw,46px);font-weight:700;color:var(--amber)}
+  .bigstat .d{font-size:12px;color:var(--muted);margin-top:6px;max-width:24ch;line-height:1.5;font-family:var(--sans)}
+  .opnote{font-size:11.5px;color:var(--faint);line-height:1.5;max-width:28ch;border-left:2px solid var(--border2);padding-left:12px}
+  /* slide 3 build-coordination bands */
+  .bands{display:flex;flex-direction:column;gap:10px;margin-top:22px;max-width:600px}
+  .band{border:1px solid var(--border);border-radius:10px;background:var(--panel);padding:13px 18px}
+  .band .role{font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);margin-bottom:5px}
+  .band .bl2{font-weight:600;font-size:15px}
+  .band .bt{font-family:var(--mono);font-size:11.5px;color:var(--muted);margin-top:4px;line-height:1.45}
+  .band.given{border-style:dashed;background:var(--panel2)} .band.given .bl2{color:var(--muted)}
+  .band.sig2{border-color:var(--blue);background:linear-gradient(90deg,rgba(91,157,255,.10),var(--panel))} .band.sig2 .role{color:var(--blue)}
+  .band.agent{border-left:3px solid var(--amber)} .band.agent .role{color:var(--amber)}
+  .tag.given{color:var(--purple);background:rgba(167,139,250,.08);border:1px solid rgba(167,139,250,.3)}
+  /* slide 3 two-part process */
+  .parts{display:grid;grid-template-columns:1fr 1fr;gap:2.5vw;margin-top:24px}
+  .part{border:1px solid var(--border);border-radius:12px;background:var(--panel);padding:20px 22px}
+  .part.p2{border-left:3px solid var(--amber)} .part.p1{border-left:3px solid var(--blue)}
+  .part .pnum{font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--blue);margin-bottom:6px}
+  .part.p2 .pnum{color:var(--amber)}
+  .part .pt{font-weight:650;font-size:16px;margin-bottom:4px}
+  .part .pwhat{font-size:12px;color:var(--faint);margin-bottom:14px;line-height:1.4}
+  .part ul{list-style:none;display:flex;flex-direction:column;gap:9px}
+  .part li{font-size:12.5px;color:var(--muted);line-height:1.45;padding-left:16px;position:relative}
+  .part li::before{content:"›";position:absolute;left:0;color:var(--faint);font-family:var(--mono)}
+  .part li b{color:var(--text);font-weight:600}
+  .s3grid{display:grid;grid-template-columns:1.5fr .8fr;gap:3vw;align-items:center}
+
+  /* slide 4 build/buy */
+  .rows{display:flex;flex-direction:column;gap:12px;margin-top:26px;max-width:880px}
+  .row{display:grid;grid-template-columns:120px 1fr;gap:18px;align-items:center;border:1px solid var(--border);border-radius:10px;background:var(--panel);padding:16px 18px}
+  .tag{font-family:var(--mono);font-weight:700;font-size:12px;letter-spacing:.1em;text-align:center;padding:7px 0;border-radius:6px}
+  .tag.buy{color:var(--muted);background:var(--panel2);border:1px solid var(--border2)}
+  .tag.build{color:#0B0E14;background:var(--blue)}
+  .row .what{font-weight:600;font-size:14.5px} .row .why{color:var(--muted);font-size:12.5px;margin-top:4px}
+  .row .trade{font-size:11.5px;color:var(--faint);margin-top:5px} .row .trade b{color:var(--amber);font-weight:600;font-family:var(--mono);font-size:10px;letter-spacing:.06em}
+  .footrule{margin-top:24px;font-family:var(--mono);font-size:14px;color:var(--text);max-width:70ch;line-height:1.6;border-left:3px solid var(--amber);padding-left:16px}
+
+  /* slide 5 sequencing */
+  .s5grid{display:grid;grid-template-columns:1fr 1fr;gap:5vw;align-items:center;margin-top:24px}
+  .s5grid .seqbul{margin-top:0}
+  .bars{display:flex;align-items:flex-end;gap:30px;height:300px;padding-top:20px}
+  .bar{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:10px;flex:1}
+  .bar .fill{width:64px;border-radius:8px 8px 0 0;background:linear-gradient(180deg,var(--blue),#2b517f)}
+  .bar.b2 .fill{background:linear-gradient(180deg,var(--amber),#8a6516)}
+  .bar.b3 .fill{background:repeating-linear-gradient(135deg,#2a3445,#2a3445 6px,#222b3a 6px,#222b3a 12px);border:1px dashed var(--border2)}
+  .bar .d{font-family:var(--mono);font-weight:700;font-size:20px}
+  .bar .nm{font-size:12px;color:var(--muted)} .bar .nt{font-size:10.5px;color:var(--faint);text-align:center}
+  .depg{border:1px solid var(--border);border-radius:12px;background:var(--panel2);padding:18px}
+  .depg .cap{font-family:var(--mono);font-size:11px;color:var(--faint);margin-top:10px;text-align:center}
+  .seqbul{margin-top:24px;display:flex;flex-direction:column;gap:10px;max-width:64ch}
+  .seqbul div{font-size:13.5px;color:var(--muted);padding-left:18px;position:relative}
+  .seqbul div::before{content:"›";position:absolute;left:0;color:var(--blue);font-family:var(--mono)}
+
+  /* slide 6 decisions */
+  .cards{display:flex;flex-direction:column;gap:12px;margin-top:24px;max-width:880px}
+  .card{border:1px solid var(--border);border-radius:12px;background:var(--panel);overflow:hidden;cursor:pointer;transition:border-color .2s}
+  .card:hover{border-color:var(--border2)}
+  .card .head{display:flex;align-items:center;gap:14px;padding:16px 18px}
+  .card .ct{font-weight:600;font-size:15px;flex:1}
+  .card .ctag{font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;color:var(--amber);border:1px solid var(--amber-dim,#6b5320);background:rgba(245,181,68,.08);padding:4px 10px;border-radius:20px}
+  .card .arr{color:var(--faint);font-family:var(--mono);transition:transform .25s}
+  .card.open .arr{transform:rotate(90deg)}
+  .card .body{max-height:0;overflow:hidden;transition:max-height .3s ease}
+  .card.open .body{max-height:240px}
+  .card .bi{padding:0 18px 18px;display:flex;flex-direction:column;gap:10px}
+  .card .bi p{font-size:13px;color:var(--muted);line-height:1.55}
+  .card .bi b{color:var(--text);font-weight:600}
+  .terrain{margin-top:22px;font-family:var(--mono);font-size:15px;color:var(--text)}
+  .terrain .s{display:block;font-family:var(--sans);font-size:12.5px;color:var(--muted);margin-top:6px}
+  /* static decision cards (no dropdown) */
+  .dcard{border:1px solid var(--border);border-left:3px solid var(--blue);border-radius:10px;background:var(--panel);padding:14px 18px}
+  .dcard .dh{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .dcard .dt{font-weight:600;font-size:14.5px;flex:1}
+  .dcard .dtag{font-family:var(--mono);font-size:10px;letter-spacing:.06em;color:var(--amber);border:1px solid rgba(245,181,68,.3);background:rgba(245,181,68,.08);padding:3px 9px;border-radius:20px}
+  .dcard .dl{font-size:12.5px;color:var(--muted);line-height:1.5;margin-top:7px}
+
+  /* slide 7 what broke */
+  .timeline{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-top:26px}
+  .tstep{border:1px solid var(--border);border-radius:10px;background:var(--panel);padding:14px}
+  .tstep .tn{font-family:var(--mono);font-size:11px;color:var(--faint)}
+  .tstep .tl{font-weight:600;font-size:13px;margin:6px 0}
+  .tstep .td{font-size:11.5px;color:var(--muted);line-height:1.45}
+  .sysfix{margin-top:16px;border:1px solid var(--green);border-radius:12px;background:linear-gradient(90deg,rgba(78,212,160,.08),var(--panel));padding:16px 20px}
+  .sysfix .h{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--green);margin-bottom:8px}
+  .sysfix p{font-size:13px;color:var(--text);line-height:1.55;max-width:90ch}
+  .ilnote{margin-top:12px;font-size:12px;color:var(--faint);font-style:italic;max-width:90ch}
+  .diff{margin-top:14px;display:grid;grid-template-columns:auto 1fr;gap:10px 14px;align-items:baseline;max-width:92ch}
+  .diff .dh{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--amber);grid-column:1/-1}
+  .diff .k{font-family:var(--mono);font-size:11px;color:var(--blue);white-space:nowrap}
+  .diff .t{font-size:12.5px;color:var(--muted);line-height:1.45}
+
+  /* slide 8 outcome */
+  .metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:24px}
+  .metric{border:1px solid var(--border);border-radius:12px;background:var(--panel);padding:20px}
+  .metric .mv{font-family:var(--mono);font-weight:700;font-size:clamp(26px,3vw,38px)}
+  .metric.green .mv{color:var(--green)} .metric.amber .mv{color:var(--amber)} .metric.blue .mv{color:var(--blue)}
+  .metric .ml{font-size:12.5px;font-weight:600;margin-top:8px} .metric .ms{font-size:11px;color:var(--muted);margin-top:3px}
+  .bridge-quote{margin-top:30px;font-size:clamp(15px,1.6vw,20px);line-height:1.6;max-width:74ch;color:var(--text)}
+  .bridge-quote b{color:var(--amber);font-weight:600}
+  .ghbtn{display:inline-flex;align-items:center;gap:8px;margin-top:24px;font-family:var(--mono);font-size:12px;color:var(--muted);border:1px solid var(--border2);border-radius:8px;padding:9px 14px;text-decoration:none;width:fit-content}
+  .ghbtn:hover{color:var(--text);border-color:var(--blue)}
+
+  /* presenter notes */
+  #notes{position:fixed;left:0;right:0;bottom:0;max-height:42vh;overflow:auto;background:#070A0F;border-top:1px solid var(--border2);
+    padding:20px 8vw;z-index:90;transform:translateY(100%);transition:transform .3s ease;font-size:14px;line-height:1.6;color:#C7CEDA}
+  #notes.show{transform:translateY(0)}
+  #notes .nh{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--amber);margin-bottom:10px}
+  #notes b{color:#fff}
+
+  @media (max-width:900px){
+    .s1wrap,.s3grid,.s5grid{grid-template-columns:1fr;gap:24px}
+    .globe{max-width:300px} .timeline{grid-template-columns:1fr 1fr} .metrics{grid-template-columns:1fr 1fr}
+    .ba,.bridge{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+<div id="progress"></div>
+<div id="counter">01 / 09</div>
+<div id="brand">built &amp; presented by Joshua Tobin · self-contained, no dependencies</div>
+<div id="hint">Press → to advance &nbsp;·&nbsp; N for notes</div>
+
+<!-- ============ SLIDE 1 ============ -->
+<section class="slide active">
+  <div class="s1wrap">
+    <div>
+      <div class="kicker">Infrastructure Deep-Dive</div>
+      <h1>Global Region <span class="bl">Build-Out</span></h1>
+      <p class="sub">Stand up new cloud regions for a large enterprise SaaS platform — while it stays live for paying customers. Contracts already signed. Deadlines set in stone.</p>
+      <div class="stats">
+        <div class="stat"><div class="n bl">9</div><div class="l">months</div></div>
+        <div class="stat"><div class="n">100+</div><div class="l">engineers</div></div>
+        <div class="stat"><div class="n">4</div><div class="l">continents</div></div>
+      </div>
+      <div class="chips">
+        <span class="chip">Live system · zero downtime</span>
+        <span class="chip">4 continents · 12+ hr spread</span>
+        <span class="chip">Immovable deadlines</span>
+        <span class="chip">200+ apps · deps unmapped</span>
+      </div>
+      <div class="anchor">The real deliverable was a reusable blueprint for standing up a region.</div>
+    </div>
+    <div>
+      <svg class="globe" viewBox="0 0 400 400">
+        <circle cx="200" cy="200" r="150" fill="none" stroke="#1E2633" stroke-width="1"/>
+        <ellipse cx="200" cy="200" rx="150" ry="55" fill="none" stroke="#1E2633" stroke-width="1"/>
+        <ellipse cx="200" cy="200" rx="55" ry="150" fill="none" stroke="#1E2633" stroke-width="1"/>
+        <line class="link" x1="120" y1="150" x2="150" y2="280"/>
+        <line class="link" x1="150" y1="280" x2="300" y2="170"/>
+        <line class="link" x1="120" y1="150" x2="300" y2="170"/>
+        <line class="link" x1="300" y1="170" x2="260" y2="300"/>
+        <circle class="node" cx="120" cy="150" r="5"/><text x="120" y="138" fill="#8A94A6" font-size="10" font-family="monospace" text-anchor="middle">US</text>
+        <circle class="node" cx="150" cy="280" r="5"/><text x="150" y="300" fill="#8A94A6" font-size="10" font-family="monospace" text-anchor="middle">BA</text>
+        <circle class="node new" cx="300" cy="170" r="5"/><circle class="node new pulse" cx="300" cy="170" r="5"/><text x="312" y="160" fill="#F5B544" font-size="10" font-family="monospace">IN</text>
+        <circle class="node new" cx="260" cy="300" r="5"/><circle class="node new pulse" cx="260" cy="300" r="5"/><text x="272" y="300" fill="#F5B544" font-size="10" font-family="monospace">EU</text>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<!-- ============ SLIDE 2 ============ -->
+<section class="slide">
+  <div class="kicker">02 · My Role &amp; the Team</div>
+  <h1>The connective tissue</h1>
+  <p class="sub">I owned the delivery guarantee and the architecture that let a distributed team move as one. A small core team, built so it delivered like a large one.</p>
+  <div class="bridge">
+    <div class="col">
+      <div class="pill"><div class="t">US Teams</div><div class="s">Engineering</div></div>
+      <div class="pill"><div class="t">Buenos Aires</div><div class="s">Engineering</div></div>
+      <div class="pill"><div class="t">India</div><div class="s">Engineering</div></div>
+      <div class="pill"><div class="t">Europe</div><div class="s">Engineering</div></div>
+    </div>
+    <div class="center"><div class="me"><div class="t">Me + core team</div><div class="s">technical architecture as the bridge</div></div></div>
+    <div class="col">
+      <div class="pill"><div class="t">Product &amp; PM</div><div class="s">Roadmap</div></div>
+      <div class="pill"><div class="t">Leadership</div><div class="s">Executive sponsors</div></div>
+      <div class="pill"><div class="t">Customers</div><div class="s">Contractual commitments</div></div>
+    </div>
+  </div>
+  <div class="ba">
+    <div class="box"><div class="h before">Before</div><ul>
+      <li>Provisioning ran on antiquated spreadsheets and tribal knowledge — no owners, no accountability</li>
+      <li>Handoffs dropped; same questions re-asked across timezones</li>
+      <li>Decisions made in one standup never reached another continent</li>
+      <li>Rework everywhere; deadlines slipping</li></ul></div>
+    <div class="box"><div class="h after">After</div><ul class="after">
+      <li>Structured handoffs, explicit owners — decisions stopped getting lost</li>
+      <li>Standups at every timezone seam; one shared status, any continent</li>
+      <li>100+ engineers operating as one coordinated unit</li></ul></div>
+  </div>
+  <div class="anchor">The coordination layer I built for a human team is the structure an agent workforce inherits.</div>
+</section>
+
+<!-- ============ SLIDE 3 ============ -->
+<section class="slide">
+  <div class="kicker">03 · What We Built</div>
+  <h1>Two problems the provisioning system <span class="bl">couldn't solve.</span></h1>
+  <p class="sub">The internal build system provisions — but it doesn't know what to build, and it can't manage what happens when builds fail. We built both layers around it.</p>
+  <div class="parts">
+    <div class="part p1">
+      <div class="pnum">Part 1 · Inflation</div>
+      <div class="pt">Telling the build system what to build</div>
+      <div class="pwhat">Turning the service-instance list into the artifact knowledge the build system needs.</div>
+      <ul>
+        <li>Started as <b>manual spreadsheet toil</b> — slow, error-prone, no accountability</li>
+        <li>Drove an <b>ADR</b> and got the platform team to build their <b>first-ever deep link</b> into the system</li>
+        <li>Moved it into an <b>agent-based workflow</b> — inflation is now automated end to end</li>
+      </ul>
+    </div>
+    <div class="part p2">
+      <div class="pnum">Part 2 · Coordination</div>
+      <div class="pt">Managing the deploy lifecycle</div>
+      <div class="pwhat">The provisioning system has no concept of it — thousands of deploy notifications, and what to do when a build fails.</div>
+      <ul>
+        <li>The build system has <b>no way to coordinate</b> notifications or handle failures at scale</li>
+        <li>We inject <b>deterministic workflows + Mastra agents</b> to notify, catch failures, and intervene</li>
+        <li>Payoff: <b>faster iteration, service-owner trust, executives watching timelines accelerate</b></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ============ SLIDE 4 ============ -->
+<section class="slide">
+  <div class="kicker">04 · What's Worth Owning</div>
+  <h1>Build the differentiator.<br><span class="am">Buy the rest.</span></h1>
+  <p class="sub">Agents collapsed the cost of creation, so the question is no longer build versus buy — it's what is actually worth owning.</p>
+  <div class="rows">
+    <div class="row"><div class="tag given">GIVEN</div><div><div class="what">Internal provisioning system + managed AWS (EKS, RDS, Vault)</div><div class="why">Upstream and standard. I adapted to them rather than fighting to replace them — the leverage was never going to come from reinventing infra.</div><div class="trade"><b>Traded:</b> no control over the provisioning system; had to engineer around its constraints.</div></div></div>
+    <div class="row"><div class="tag build">BUILD</div><div><div class="what">Build coordination tooling + bounded agents (Mastra)</div><div class="why">No off-the-shelf tool fit the coordination problem — 200+ apps, dependency ordering, compliance gates. Deterministic code by default; agents only at the judgment points, test-gated, never unsupervised on the apply path.</div><div class="trade"><b>Traded:</b> we own the maintenance, and must verify agent output by tests rather than trust it.</div></div></div>
+  </div>
+  <div class="footrule">You can generate code with an agent. You can't generate a FedRAMP authorization or a vendor's uptime. Build what differentiates you; buy the commodity.</div>
+</section>
+
+<!-- ============ SLIDE 5 ============ -->
+<section class="slide">
+  <div class="kicker">05 · Sequencing the Build-Out</div>
+  <h1>Each region was faster to build <span class="bl">than the one before.</span></h1>
+  <div class="s5grid">
+    <div class="bars">
+      <div class="bar b1"><div class="d">120d</div><div class="fill" style="height:240px"></div><div class="nm">India</div><div class="nt">Q1–Q2 · built the platform</div></div>
+      <div class="bar b2"><div class="d">45d</div><div class="fill" style="height:90px"></div><div class="nm">Australia</div><div class="nt">Q3 · reused it</div></div>
+      <div class="bar b3"><div class="d" style="color:var(--faint)">~22d</div><div class="fill" style="height:44px"></div><div class="nm">Next</div><div class="nt">Q4 · projected</div></div>
+    </div>
+    <div class="seqbul">
+      <div>Front-loaded the platform: the coordination tooling and the first region landed in Q1–Q2, before scaling out.</div>
+      <div>Sequenced by dependency risk — the services that unblocked the most downstream apps went first. Dependencies live in code, so build order was derived, not guessed.</div>
+      <div>Bounded AI agents fixed ordering bugs and fed each fix back in, so every region went faster than the last.</div>
+    </div>
+  </div>
+  <div class="anchor" style="margin-top:14px">AI was the accelerant — deterministic code, agents injected at the judgment points. Never AI slop.</div>
+</section>
+
+<!-- ============ SLIDE 6 ============ -->
+<section class="slide">
+  <div class="kicker">06 · Key Decisions</div>
+  <h1>Navigating the terrain</h1>
+  <p class="sub">The hardest calls weren't technical — they were organizational and compliance constraints.</p>
+  <div class="cards">
+    <div class="dcard"><div class="dh"><span class="dt">Compliance as a gate, not a wall</span><span class="dtag">driving alignment</span></div>
+      <div class="dl">A platform mandate forced manual provisioning, no API. I drove an ADR and earned a seat at the platform team's design table, convincing them to build their first-ever deep link into the system. Engineered through the constraint by aligning the team that owned it — not by going around them.</div></div>
+    <div class="dcard"><div class="dh"><span class="dt">Incremental over rewrite</span><span class="dtag">value before perfect code</span></div>
+      <div class="dl">Inherited spreadsheets and tribal knowledge. Chose layer-by-layer automation over a stalling rewrite — each step shipped value immediately while migrating people off manual work.</div></div>
+    <div class="dcard"><div class="dh"><span class="dt">The bottleneck was reasoning, not people</span><span class="dtag">leverage over headcount</span></div>
+      <div class="dl">100+ engineers, no headcount coming. Invested in parallel-work architecture, async handoffs, and agent-assisted tooling that multiplied output — making what we had 10× more effective.</div></div>
+  </div>
+  <div class="terrain">The organization isn't the enemy. It's the terrain.<span class="s">Every compliance gate I passed left a tooling artifact that made the next pass faster.</span></div>
+</section>
+
+<!-- ============ SLIDE 7 ============ -->
+<section class="slide">
+  <div class="kicker">07 · What Broke</div>
+  <h1>What broke — <span class="am">and the fix that compounds.</span></h1>
+  <div class="timeline">
+    <div class="tstep"><div class="tn">01</div><div class="tl">What broke</div><div class="td">Dependency ordering wrong in main.tf — apply ran out of order, downstream services came up broken.</div></div>
+    <div class="tstep"><div class="tn">02</div><div class="tl">Blast radius</div><div class="td">Caught during region bring-up, before customer impact. Platform held at 99.9%.</div></div>
+    <div class="tstep"><div class="tn">03</div><div class="tl">Detection</div><div class="td">Apply failures surfaced during bring-up; bounded agents were watching for ordering faults.</div></div>
+    <div class="tstep"><div class="tn">04</div><div class="tl">Diagnosis</div><div class="td">A missing dependency edge. Wrong assumption: that every team had declared its real deps.</div></div>
+    <div class="tstep"><div class="tn">05</div><div class="tl">Fix</div><div class="td">Agents proposed corrected Terraform; a test gate approved it. Agents only at diagnosis — never unsupervised on apply.</div></div>
+  </div>
+  <div class="sysfix"><div class="h">The systemic fix</div>
+    <p>Every fix was appended to the living blueprint, so the next region couldn't repeat it. The failure class shrank with every region — the mechanism behind 120 days dropping to 45.</p></div>
+  <div class="ilnote">In an IL5 or JWICS environment, that same gate gains a human approver and a signed audit trail. The architecture stays — the gate adapts to the compliance terrain.</div>
+  <div class="diff">
+    <div class="dh">What I'd do differently today</div>
+    <div class="k">Agents first</div><div class="t">We proved the bottleneck was coordination, then built the agent layer. Today I'd stand up the deterministic-workflow-and-agent layer before region one — region one should have looked like region three.</div>
+    <div class="k">Gate it up front</div><div class="t">Make "declare your dependencies in code" a hard gate to entering the build from day one, instead of catching mis-declared deps when a region broke.</div>
+  </div>
+</section>
+
+<!-- ============ SLIDE 8 ============ -->
+<section class="slide">
+  <div class="kicker">08 · The Outcome &amp; the Bridge</div>
+  <h1>The same trusted build, <span class="bl">verifiably, everywhere.</span></h1>
+  <div class="metrics">
+    <div class="metric green"><div class="mv" data-to="3">0</div><div class="ml">Regions delivered on deadline</div><div class="ms">of 11 — the platform is built; the rest reuse it</div></div>
+    <div class="metric amber"><div class="mv" data-to="3" data-suffix="wk">0</div><div class="ml">Red → green</div><div class="ms">stayed green through month 9</div></div>
+    <div class="metric blue"><div class="mv" data-to="0">0</div><div class="ml">Customer-impacting incidents</div><div class="ms">no one felt the build</div></div>
+    <div class="metric blue"><div class="mv">↑</div><div class="ml">Revenue unlocked</div><div class="ms">significant ACV · NDA-protected</div></div>
+  </div>
+  <p class="bridge-quote">Strip away the regions and the timezones and the problem was this: ship the same trusted build, <b>defined in code</b>, into every environment — under constraints that don't move. That's the problem Onebrief lives: <b>one signed build running in commercial cloud, on classified networks, and on air-gapped systems at the edge.</b> The constraints there are harder. The engineering problem is the one I just solved.</p>
+  </section>
+
+<!-- ============ SLIDE 9 ============ -->
+<section class="slide" style="align-items:center;text-align:center">
+  <div class="kicker">Closing</div>
+  <h1>Thank you.</h1>
+  <a class="ghbtn" href="https://github.com/joshuatobin/onebrief-demo" target="_blank" style="margin-top:28px;margin-left:auto;margin-right:auto">◆ Source on GitHub — github.com/joshuatobin/onebrief-demo</a>
+</section>
+
+<!-- presenter notes -->
+<div id="notes"><div class="nh">Presenter notes</div><div id="notes-body"></div></div>
+
+<script>
+  const slides=[...document.querySelectorAll('.slide')];
+  const total=slides.length;
+  let i=0, notesOpen=false;
+  const progress=document.getElementById('progress');
+  const counter=document.getElementById('counter');
+  const hint=document.getElementById('hint');
+  const notes=document.getElementById('notes');
+  const nbody=document.getElementById('notes-body');
+
+  const NOTES=[
+    "For nine months the job looked like building cloud regions. It wasn't — it was keeping every paying customer live while the platform grew underneath them, and unlocking revenue already under contract. The interesting part was never the clusters; it was the blueprint underneath them.",
+    "I didn't manage 100 people — I owned the platform and the coordination model that 100 engineers across four timezones delivered through. My direct team was small; my blast radius was the whole build-out. The before/after is the coordination layer I built: owners, protocols, one source of truth.",
+    "This is the heart of it, told in two parts. There's an internal build-and-provisioning system, upstream, that we couldn't change. Part one we call inflation: turning the service-instance list into all the artifact knowledge the build system needs to actually build. That started as manual spreadsheet toil, so I drove an ADR, got the platform team to build their first-ever deep link into the system, then moved the whole thing into an agent-based workflow — inflation is now automated end to end. Part two is pure coordination: the build system has no concept of managing thousands of deploy notifications, or of what to do when a build fails. That's where we inject deterministic workflows and Mastra-based agents — to notify, catch failures, and intervene. The payoff was faster iteration, service owners trusting the system, and executives watching the timelines accelerate.",
+    "Honest build-versus-buy here: the infrastructure and the provisioning system were given — upstream, standard, not my decision to make. I adapted to them. The decision I actually owned was what to build on top: I built the coordination tooling and the agent layer, because nothing off-the-shelf fit our coordination problem. Agents made building it cheap, which is the real shift — but the cost of owning and operating what you build has not collapsed, so I only built where it differentiated us and bought or adopted everything else.",
+    "Three of eleven isn't 27% done — it's the platform done. I sequenced from the dependency graph itself, which lived in the Terraform, so the order was derivable, not a gut call. Here's the AI story, and it's the important one: AI was the accelerant. Bounded agents diagnosed and fixed the ordering bugs and appended every fix to the blueprint, so the platform got more correct on its own and the curve bent. But this is deterministic code with agents injected strategically — agents only at the judgment points, test-gated, never unsupervised on the apply path. Not AI slop, and not an autopilot. That's the posture I'd bring to an agentic platform.",
+    "These were the hardest calls and they weren't technical. The compliance one is the key story: I didn't go around the control — I engineered through it. The platform team owned the constraint; I brought them a design that satisfied compliance AND the deadline, and we built it together. The automation sat on top of their compliant UI, not around it.",
+    "The honest failure. Region bring-ups kept breaking because dependency ordering was wrong — owners had mis-declared deps. The fix was a bounded agent system on Mastra: deterministic code detected the fault, an agent was scoped only to diagnose and propose the corrected Terraform, automated tests gated it, and it never touched the apply path unsupervised. Every fix appended to the blueprint, so the next region couldn't repeat it. WHAT I'D DO DIFFERENTLY, two things: first, agent strategy — we spent region one proving the bottleneck was coordination before building the agent layer; today I'd stand up the deterministic-workflow-and-agent layer before the first region, so region one looked like region three. Second, governance — I'd make declaring dependencies in code a hard gate to entering the build from day one, instead of catching mis-declared deps when a region broke. IF PUSHED ON 'no human approval': here, pre-customer, a test gate was right; in IL5/JWICS the controls require human approval and separation of duties, so the same architecture keeps a human at the gate and a signed audit record. The gate adapts to the environment.",
+    "The close: strip away the regions and the timezones and the problem was shipping the same trusted build, defined in code, into every environment under constraints that don't move. That's exactly the problem Onebrief lives — one signed build running in commercial cloud, on classified networks, and on air-gapped systems at the edge. The constraints there are harder, but the engineering problem is the one I just solved. That's why the experience transfers.",
+    "Thank you — I'm happy to go as deep as you want on any of it: the two-part build system, the agent strategy, the sequencing, or what I'd do differently. The full source for this deck is on my GitHub."
+  ];
+
+  function show(n){
+    slides[i].classList.remove('active');
+    i=Math.max(0,Math.min(total-1,n));
+    slides[i].classList.add('active');
+    progress.style.width=((i+1)/total*100)+'%';
+    counter.textContent=String(i+1).padStart(2,'0')+' / '+String(total).padStart(2,'0');
+    nbody.textContent=NOTES[i];
+    if(slides[i].querySelector('.metrics')) animateMetrics();
+  }
+  function next(){show(i+1)} function prev(){show(i-1)}
+
+  let metricsDone=false;
+  function animateMetrics(){
+    if(metricsDone)return; metricsDone=true;
+    document.querySelectorAll('.metric .mv[data-to]').forEach(el=>{
+      const to=+el.dataset.to;
+      let v=0; const step=Math.max(1,Math.round(to/24)||1);
+      const t=setInterval(()=>{v+=step; if(v>=to){v=to;clearInterval(t)} el.textContent=(el.closest('.green')?v+'/11':v+(el.dataset.suffix?' '+el.dataset.suffix:''));},28);
+    });
+  }
+
+  document.addEventListener('keydown',e=>{
+    if(e.key==='ArrowRight'||e.key===' '||e.key==='PageDown'){next();fade()}
+    else if(e.key==='ArrowLeft'||e.key==='PageUp'){prev();fade()}
+    else if(e.key.toLowerCase()==='n'){notesOpen=!notesOpen;notes.classList.toggle('show',notesOpen)}
+    else if(e.key==='Home'){show(0)} else if(e.key==='End'){show(total-1)}
+  });
+  document.addEventListener('click',e=>{
+    if(e.target.closest('a')||e.target.closest('#notes'))return;
+    const x=e.clientX/window.innerWidth; if(x>0.35){next()}else{prev()} fade();
+  });
+  function fade(){hint.classList.add('gone')}
+  show(0);
+</script>
+</body>
+</html>
